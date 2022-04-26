@@ -23,7 +23,7 @@ def _handle_merge_replace(destination, source, key):
     if isinstance(destination[key], Counter) and isinstance(source[key], Counter):
         # Merge both destination and source `Counter` as if they were a standard dict.
         _deepmerge(destination[key], source[key])
-    else:
+    elif source[key]:
         # If a key exists in both objects and the values are `different`, the value from the `source` object will be used.
         destination[key] = deepcopy(source[key])
 
@@ -32,7 +32,14 @@ def _handle_merge_additive(destination, source, key):
     # Values are combined into one long collection.
     if isinstance(destination[key], list) and isinstance(source[key], list):
         # Extend destination if both destination and source are `list` type.
-        destination[key].extend(deepcopy(source[key]))
+        dst = destination[key]
+        src = deepcopy(source[key])
+        for i in range(max(len(dst), len(src))):
+            if len(dst) <= i:
+                dst.append(None)
+            elif len(src) <= i:
+                src.append(None)
+            _handle_merge[Strategy.ADDITIVE](dst, src, i)
     elif isinstance(destination[key], set) and isinstance(source[key], set):
         # Update destination if both destination and source are `set` type.
         destination[key].update(deepcopy(source[key]))
@@ -42,6 +49,9 @@ def _handle_merge_additive(destination, source, key):
     elif isinstance(destination[key], Counter) and isinstance(source[key], Counter):
         # Update destination if both destination and source are `Counter` type.
         destination[key].update(deepcopy(source[key]))
+    elif isinstance(destination[key], Mapping) and isinstance(source[key], Mapping):
+        # Deep merge if both destination and source are `Mapping` type.
+        _deepmerge(destination[key], source[key], Strategy.ADDITIVE)
     else:
         _handle_merge[Strategy.REPLACE](destination, source, key)
 
